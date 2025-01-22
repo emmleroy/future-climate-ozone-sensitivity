@@ -1,0 +1,67 @@
+name: OZCLIM-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - jupyter>=1.0.0              # Jupyter federation architecture
+  - cartopy>=0.17.0             # Geographic plotting toolkit
+  - numpy>=1.23.1               # N-d array and numerics
+  - esmpy>=7.1.0                # ESMF for python
+  - pip>=19.2.2                 # Package installer for Python
+  - python>=3.6                 # Python version 3.6
+  - dask>=2.3.0                 # Parallel processing library
+  - netcdf4>=1.4.2              # Wrapper for netcdf4
+  - notebook>=6.0.0             # Notebook interface
+  - xarray=0.20.2               # N-d labeled array library.
+  - scipy>=1.3.1                # Common math/stats/science functions
+  - pandas>=0.25.1              # Labeled array libraries        
+  - pytest>=5.0.1               # Unit/mock testing tools
+  - ipython>=7.31.0             # IPython interpreter and tools
+  - matplotlib>=3.1.1           # 2D plotting library
+  - xesmf>=0.2.1                # Universal regridder
+  - h5py>=2.9.0                 # Wrapper for HDF5
+  - jupyterlab>=3.4.7           # Next-generation jupyter 
+  - pynco>=1.0.0                # Python bindings for NCO
+  - tqdm>=4.62.3                # Progress bar
+  - seaborn>=0.11.2             # Data visualization library
+  - jupyterlab_code_formatter>=1.4.10
+  - black>=21.12b0              # Python code formatting
+  - isort>=5.10.1               # Black dependency for sorting imports
+  - jupyter_contrib_nbextensions # For jupyter notebook extensions
+  - shapely>=1.8.0              # For planar features
+  - regionmask>=0.8.0           # To create masks of geographic regions
+  - basemap>=1.2.2              # Map projections 
+  - xbpch>=0.3.5                # Interface fo bpch outputfiles
+  - h5netcdf                    # Allow HDF5-backend for xarray
+  - joblib>=0.17.0              # Parallel processing for Python
+  - pycodestyle>=2.5.0          # To check style conventions
+  - pypdf2>=1.26.0              # PDF utilities
+  - sphinx                      # Base sphinx documentation library
+  - sphinx_rtd_theme            # ReadTheDocs theme for documentation
+  - sphinx-autoapi              # Automatic API documentation generation
+  - tabulate>=0.8.3             # Pretty-print tabular data in Python
+  - jupyterlab-lsp              # Language Server Protocol integration for JupyterLab
+  - jupyter-lsp-python          # Metapackage for jupyter-lsp and puthon-lsp-server
+  - mscorefonts>=0.0.1          # For fonts like Arial, Georgia, Times New Roman
+  - xskillscore>=0.0.24
+  - geocat-viz>=2022.07.0       # GeoCAT visualization
+  - jupytext>=1.14.0            # For version control
+  - mpl-probscale>=0.2.5        # For a probability scale
+  - openpyxl>=3.0.10            # To read excel files
+  - ipympl>=0.9.3               # interactive plotting
+  - nc-time-axis>=1.4.1         # For making plots in matplotlib with axes made up of cftime.datetime dates with any calendar type
+  - rioxarray>=0.17.0           # for opening tiff files
+  - pip:
+          # Local pip-installable packages
+          - -e /home/eleroy/proj-dirs/OZCLIM
+          - -e /home/eleroy/proj-dirs/OZCLIM/scripts/public_scripts/future-climate-ozone-sensitivity
+          - -e /home/eleroy/lib/gcpy
+          - -e /home/eleroy/lib/gcgridobj
+          # Github pip-installable packages
+          - git+https://github.com/LiamBindle/sparselt.git
+          - git+https://github.com/LiamBindle/gridspec.git
+          # Other packages to search for
+          - airbase
+          - openair
+          - font-roboto
+        
