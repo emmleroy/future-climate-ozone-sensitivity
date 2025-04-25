@@ -465,8 +465,9 @@ def _get_complete_valid_site_info(region, month, criteria=90):
         """Given lat/lon coordinates, return the IPCC AR6 region those coordinates lie in"""
         lat_array = np.atleast_1d(lat)
         lon_array = np.atleast_1d(lon)
-
-        new_EAS = np.array([[117,45], [109,37], [109,30], [134,30], [134,30], [150,45]])
+        
+        #new_EAS = np.array([[117,45], [109,37], [109,30], [134,30], [134,30], [150,45]])
+        new_EAS = np.array([[117,45], [109,37], [109,30], [126,30],[142,45]])
         inside = point_in_polygon_shapely(lon, lat, new_EAS)
         if inside is True:
             return 58
@@ -592,7 +593,7 @@ def get_model_mda8o3(ds_ref, month):
 
 def crop_regionmask_ar6_c48(c48_da, region_num):
     if region_num==58:
-        mask_c48 = xr.open_dataarray(f"{MODEL_OUTPUT_DIR}/tools/regionmask.defined_regions.ar6.EAS.modified.mask_3D.c48.nc")
+        mask_c48 = xr.open_dataarray(f"{MODEL_OUTPUT_DIR}/tools/regionmask.defined_regions.ar6.EAS.modifiedv2.mask_3D.c48.nc")
         c48_da_masked = c48_da.where(mask_c48)
     else:
         mask_c48 = xr.open_dataarray(f"{MODEL_OUTPUT_DIR}/tools/regionmask.defined_regions.ar6.all.mask_3D.c48.nc")
