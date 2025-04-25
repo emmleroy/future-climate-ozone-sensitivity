@@ -466,7 +466,6 @@ def _get_complete_valid_site_info(region, month, criteria=90):
         lat_array = np.atleast_1d(lat)
         lon_array = np.atleast_1d(lon)
         
-        #new_EAS = np.array([[117,45], [109,37], [109,30], [134,30], [134,30], [150,45]])
         new_EAS = np.array([[117,45], [109,37], [109,30], [126,30],[142,45]])
         inside = point_in_polygon_shapely(lon, lat, new_EAS)
         if inside is True:
@@ -622,49 +621,6 @@ def mask_ocean_c90(c90_da):
     c90_da_masked = c90_da.where((mask_c90))
     return c90_da_masked
 
-
-def add_time_local(ds0, grid_obj=dst_grid):
-    """Take as input a c48 dataset and add local time as a data array.
-    Basic steps:
-    1. Convert longitudes from grid_obj from 0-360 to -180-180.
-    2. Calculate time offsets from UTC in hours as a function of longitude.
-    3. Apply offsets to UTC time.
-    """
-    ds0_original = ds0.copy()
-    # Function to convert longitudes from 0-360 to -180 to 180
-    def convert_longitudes(longitude):
-        return ((longitude + 180) % 360) - 180
-
-    # Convert the longitudes from 0-360 to -180 to 180
-    longitudes = grid_obj['lon']
-    longitudes_converted = convert_longitudes(longitudes)
-
-    # Calculate time offsets in hours
-    offset_hours = longitudes_converted / 15.0
-
-    # Convert the time offsets
-    time_offsets = np.array([pd.Timedelta(hours=offset) for offset in offset_hours.values.flatten()])
-    time_offsets = time_offsets.reshape(offset_hours.shape)
-
-    # Convert xarray time to pandas datetime index
-    time_utc = ds0.time.to_index()
-
-    # Create a DataArray of time_utc repeated for each grid cell
-    time_utc_da = xr.DataArray(time_utc, dims=['time'], coords={'time': ds0.time})
-
-    # Expand time_utc_da to match the dimensions of ds0
-    #time_utc_da_expanded = time_utc_da.expand_dims({'nf': ds0.dims['nf'], 'Ydim': ds0.dims['Ydim'], 'Xdim': ds0.dims['Xdim']}).transpose('time', 'nf', 'Ydim', 'Xdim')
-
-    # Apply the time offsets to the UTC time using broadcasting
-    #time_local = time_utc_da_expanded.copy()
-    #for nf in range(ds0.dims['nf']):
-    #    for y in range(ds0.dims['Ydim']):
-    #        for x in range(ds0.dims['Xdim']):
-    #            time_local[:, nf, y, x] += time_offsets[nf, y, x]
-
-    ds0_original['time_local'] = time_utc_da
-
-    return ds0_original
 
 def get_original_values_diff(variable, sim, sim_SNOx, conversion_factor=1, resolution='c48'):
     ds = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{sim}.MDA8_O3.april-august.nc4")
