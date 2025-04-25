@@ -1,15 +1,24 @@
-import re
-import os 
-import xarray as xr 
-import pandas as pd
-import numpy as np
-from typing import Pattern, List
-import gcpy.constants as gcon
+"""
+tools.py
+===================================================================
+
+Collection of useful functions for OZCLIM project.
+"""
 import glob
-import gcgridobj 
-import regionmask 
-import matplotlib.pyplot as plt 
+import os
+import re
+from typing import List, Pattern
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import xarray as xr
+import regionmask
 from shapely.geometry import Point, Polygon
+
+import gcpy.constants as gcon
+import gcgridobj
+
 
 # DEFINE DIRECTORIES HERE
 MODEL_OUTPUT_DIR = "/home/eleroy/proj-dirs/OZCLIM/data/analysis_data/GCHP_CAM_public/"
@@ -37,8 +46,6 @@ skip_vars = gcon.skip_these_vars
 
 def set_matplotlib_font(font_family: str):
     """Set the matplotlib font family.
-    Args:
-        font_family (str): the font family
     """
     supported_fonts: List[str] = {'Andale Mono', 'Arial', 'Arial Black',
                                'Comic Sans MS', 'Courier New', 'Georgia',
@@ -52,10 +59,6 @@ def set_matplotlib_font(font_family: str):
 
 def initialize_directory(directory_path: str):
     """Make a directory if it doesn't already exist.
-
-    Args:
-        directory_path (str): path to directory to be created
-
     """
 
     if os.path.exists(directory_path):
@@ -68,14 +71,6 @@ def initialize_directory(directory_path: str):
         
 def get_file_list(directory_path: str, compiled_regex: Pattern):
     """Return a list of file paths in a directory matching the regex pattern.
-
-    Args:
-        directory_path (str): path to directory where to look for files
-        compiled_regex (pattern): compiled regex pattern to match
-
-    Returns:
-        file_list (list[str]): list of file paths
-
     """
 
     file_list = []
@@ -93,13 +88,6 @@ def open_multifile_ds(file_list: List[str], compat_check=False):
     """Open multiple files (or a single file) as a single dataset.
 
     WARNING: compatibility checks are overrided for speed-up!
-
-    Args:
-        file_list (list(str): list of file paths
-
-    Returns:
-        ds (xr.DataSet): a single concatenated xr.Dataset
-
     """
 
     v = xr.__version__.split(".")
@@ -139,11 +127,6 @@ def open_multifile_ds(file_list: List[str], compat_check=False):
 def get_ds(my_simulation: str, variable_type: str):
     """ Function returns dataset for a given simulation for one of 
         three variable types ("Emissions", "SpeciesConc", or "MDA8_O3").
-
-    Args:
-        my_simulation(str): example "w10_ref"
-
-        variable_type(str): "Emissions", "SpeciesConc", or "MDA8_O3"
     """
 
     directory = MODEL_OUTPUT_DIR
@@ -165,14 +148,9 @@ def get_ds(my_simulation: str, variable_type: str):
     return ds
 
 
-
 def get_cams_ds(file_path: str):
     """
     Open a single file while dropping GCHP variables that should not be read.
-
-    Args:
-        file_path (str): path to file to be opened
-
     """
     ds = xr.open_dataset(file_path)
     if 'latitude' in ds.dims and 'longitude' in ds.dims:
@@ -249,7 +227,7 @@ def _get_ozone_observations(region, month):
 
     elif region == "WCE":
         #file_path = f'{AIRBASE_DIR}/allcountries_O3_2014.csv'
-        file_path = f'{AIRBASE_DIR}/allcountries_O3_2014_JuneAugust.csv'
+        file_path = f'{AIRBASE_DIR}/allcountries_O3_2014_JuneAugust.csv' # much faster
         if month not in [6,8]:
             raise Exception("Sorry, only June (6) or August (8) accepted for Europe")
         df_month_valid = _read_and_process_eea_data(file_path, [1, 2, 3], month)
@@ -261,6 +239,7 @@ def _get_ozone_observations(region, month):
 
 
 def _get_all_site_locations(region):
+
     # Define file paths and column names to rename for each region
     region_files = {
         "ENA": (f"{CASTNET_DIR}/activesuspendedcastnetsites.xlsx", 'Site ID and Webpage Link'),
@@ -294,7 +273,7 @@ def _get_all_site_locations(region):
             try:
                 pop_value = population_data.sel(x=lon, y=lat, method="nearest").values.item()
             except KeyError:
-                pop_value = np.nan  # Handle out-of-bounds cases
+                pop_value = np.nan
         
             population_list.append({"SITE_ID": site_id, "Population": pop_value})
 
@@ -308,7 +287,9 @@ def _get_all_site_locations(region):
 
 
 def _filter_sites_by_observation_availability(region, month, criteria=90):
-    
+    """Filter ozone observations by set percentage of minimum available 
+    observations (i.e. criteria 90 = 90%)
+    """
     df = _get_ozone_observations(region, month)
     
     # Define the number of days in each month of interest
@@ -327,7 +308,7 @@ def _filter_sites_by_observation_availability(region, month, criteria=90):
     12: 31  # December
 }
     
-    # Calculate the total possible observations for the given month (days * 24 hours)
+    # Calculate total possible observations for the given month (days * 24 hours)
     total_possible_observations = days_in_month_dict[month] * 24
     
     # Group by SITE_ID and calculate the percentage of available observations
@@ -338,7 +319,6 @@ def _filter_sites_by_observation_availability(region, month, criteria=90):
     eligible_sites = percentage_obs_per_site[percentage_obs_per_site >= criteria].index
     
     # Filter and return the DataFrame for these eligible sites
-
     available_sites = df[df['SITE_ID'].isin(eligible_sites)]
 
     if region=="WCE":
@@ -356,14 +336,7 @@ def _filter_sites_by_observation_availability(region, month, criteria=90):
 
 
 def _get_mda8o3_daily_data(region, month, criteria=90):
-    """ For the given region and month, calculate the MDA8 O3 for each day in the month
-    for sites that meet the availability criteria.
-
-    Args:
-        region(str): three-character IPCC AR6 region abreviation (ENA, WCE, or EAS)
-        month(int): i.e., 6=June, 7=July, 12=December
-        criteria(int): minimum percentage of available observations (i.e., 90)
-    
+    """Calculate MDA8 O3 for all hours that meet the availability criteria.
     """
 
     df = _filter_sites_by_observation_availability(region, month, criteria)
@@ -381,9 +354,8 @@ def _get_mda8o3_daily_data(region, month, criteria=90):
 
 
 def _get_mda8o3_daily_data_afternoon(region, month, criteria=90, min_hour=12, max_hour=17):
-    # min_hour=12, max_hour=17)
-    # min_hour=7, max_hour=23)
-
+    """Calculate MDA8 O3 for hours between 12:00 and 17:00.
+    """
     df = _filter_sites_by_observation_availability(region, month, criteria)
 
     # Convert OZONE concentrations to numeric
@@ -417,7 +389,8 @@ def _get_mda8o3_daily_data_afternoon(region, month, criteria=90, min_hour=12, ma
 
 
 def _get_complete_valid_site_info(region, month, criteria=90):
-
+    """Get site information for all valid sites in a region.
+    """
     df_valid = _filter_sites_by_observation_availability(region, month, criteria)
     site_locations_df = _get_all_site_locations(region)
     
@@ -432,6 +405,7 @@ def _get_complete_valid_site_info(region, month, criteria=90):
         merged_df = merged_df[merged_df["Duration Unit"]=="hour"]
         merged_df = merged_df[merged_df["Cadence Unit"]=="hour"]
 
+        # set date_time format
         if month == 6:
             merged_df = merged_df[merged_df['DATE_TIME']=="2014-06-06 07:00:00"]
         if month == 8:
@@ -439,13 +413,13 @@ def _get_complete_valid_site_info(region, month, criteria=90):
             
     else:                      
         merged_df = pd.merge(df_valid[['SITE_ID']].drop_duplicates(), site_locations_df, on='SITE_ID', how='left')
+    
     # note if you get CRSError: Invalid projection: +proj=gnom +lat_0=nan +lon_0=nan +type=crs: (Internal Proj Error: proj_create: invalid value for lat_0)
     # this means lat/lon is NaN for some sites
+    
     if region=="ENA" and month!=12:
-        # locate the row to update
+        # lat/lon for 'HOW191' needs to be entered manually 
         row_index = merged_df.loc[merged_df['SITE_ID'] == 'HOW191'].index[0]
-
-        # update the row with new values
         merged_df.loc[row_index, 'Latitude'] = 45.203963
         merged_df.loc[row_index, 'Longitude'] = -68.740041
 
@@ -460,7 +434,7 @@ def _get_complete_valid_site_info(region, month, criteria=90):
         point = Point(lon, lat)
         return polygon.contains(point)
 
-    # Define functions for region and grid index calculations, assuming required libraries and objects are defined
+
     def calculate_region(lat, lon):
         """Given lat/lon coordinates, return the IPCC AR6 region those coordinates lie in"""
         lat_array = np.atleast_1d(lat)
@@ -505,7 +479,8 @@ def _get_complete_valid_site_info(region, month, criteria=90):
 
 
 def get_observed_daily_mda8o3_ar6(region, month, criteria=90):
-
+    """_get_mda8o3_daily_data for all times.
+    """
     ar6_region = {
         "ENA": 5,
         "EAS": 58,
@@ -523,7 +498,9 @@ def get_observed_daily_mda8o3_ar6(region, month, criteria=90):
 
 
 def get_observed_daily_mda8o3_ar6_afternoon(region, month, criteria=90, min_hour='12:00', max_hour='17:00'):
-    
+    """_get_mda8o3_daily_data_afternoon for Local Time between 12:00 and 17:00.
+    """
+
     ar6_region = {
         "ENA": 5,
         "EAS": 35,
@@ -543,13 +520,6 @@ def get_observed_daily_mda8o3_ar6_afternoon(region, month, criteria=90, min_hour
 def get_observation_mask(sitemean_mda8o3_ar6):
     """From a list of observations with c48 coordinates, create an xarray 
     mask where these observations exist.
-
-    Args:
-        sitemean_mda8o3_ar6 (pd.DataFrame): pandas dataframe with site information (incl. cube-sphere coordinates)
-
-    Returns:
-        observation_mask (xr.Dataset): mask of observations
-
     """
 
     cs48_example_clean = cs48_example['SpeciesConc_O3'].isel(lev=0,time=0)
@@ -584,6 +554,8 @@ def get_masked_model_mda8o3(ds_ref, observation_mask, month):
 
 
 def get_model_mda8o3(ds_ref, month):
+    """Select GCHP model values.        
+    """
     da_ref = ds_ref['SpeciesConc_O3'].sel(time=ds_ref.time.dt.month.isin(month))
     if "lev" in da_ref.dims:
         da_ref = da_ref.isel(lev=0, drop=True)
@@ -591,6 +563,9 @@ def get_model_mda8o3(ds_ref, month):
 
 
 def crop_regionmask_ar6_c48(c48_da, region_num):
+    """"
+    Crop IPCC AR6 regions in c48 data array using a regridded regionmask.
+    """
     if region_num==58:
         mask_c48 = xr.open_dataarray(f"{MODEL_OUTPUT_DIR}/tools/regionmask.defined_regions.ar6.EAS.modifiedv2.mask_3D.c48.nc")
         c48_da_masked = c48_da.where(mask_c48)
@@ -601,6 +576,9 @@ def crop_regionmask_ar6_c48(c48_da, region_num):
 
 
 def crop_regionmask_ar6_c90(c90_da, region_num):
+    """"
+    Crop IPCC AR6 regions in c90 data array using a regridded regionmask.
+    """
     if region_num==58:
         mask_c90 = xr.open_dataarray(f"{MODEL_OUTPUT_DIR}/tools/regionmask.defined_regions.ar6.all.mask_3D.c90.nc")
         c90_da_masked = c90_da.where(mask_c90)
@@ -611,18 +589,27 @@ def crop_regionmask_ar6_c90(c90_da, region_num):
 
 
 def mask_ocean_c48(c48_da):
+    """"
+    Mask ocean regions in c48 data array using a regridded regionmask.
+    """
     mask_c48 = xr.open_dataarray(f"{MODEL_OUTPUT_DIR}/tools/regionmask.defined_regions.natural_earth_v5_0_0.land_110.mask_3D.c48.nc")
     c48_da_masked = c48_da.where((mask_c48))
     return c48_da_masked
 
 
 def mask_ocean_c90(c90_da):
+    """"
+    Mask ocean regions in c90 data array using a regridded regionmask.
+    """
     mask_c90 = xr.open_dataarray(f"{MODEL_OUTPUT_DIR}/tools/regionmask.defined_regions.natural_earth_v5_0_0.land_110.mask_3D.c90.nc")
     c90_da_masked = c90_da.where((mask_c90))
     return c90_da_masked
 
 
 def get_original_values_diff(variable, sim, sim_SNOx, conversion_factor=1, resolution='c48'):
+    """"
+    Function to quickly extrapolate MDA8O3(SNOx) minus MDA8O3(BASE) ratio from baseline simulations.
+    """
     ds = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{sim}.MDA8_O3.april-august.nc4")
     ds_SNOx = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{sim_SNOx}.MDA8_O3.april-august.nc4")
 
@@ -638,6 +625,9 @@ def get_original_values_diff(variable, sim, sim_SNOx, conversion_factor=1, resol
 
 
 def get_sensitivity_diff_values(variable, simulation, simulation_SNOx, year, conversion_factor=1, resolution='c48'):
+    """"
+    Function to quickly extrapolate MDA8O3(SNOx) minus MDA8O3(BASE) ratio from sensitivity simulations.
+    """
     ds = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{simulation}.MDA8_O3.april-august.{year}.nc4")
     ds_SNOx = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{simulation_SNOx}.MDA8_O3.april-august.{year}.nc4")
     
@@ -655,6 +645,10 @@ def get_sensitivity_diff_values(variable, simulation, simulation_SNOx, year, con
 
 
 def get_original_values_ratio(variable, sim, sim_SNOx, resolution='c48'):
+    """"
+    Function to quickly extrapolate MDA8O3(SNOx)/MDA8O3(BASE) ratio from baseline simulations.
+    Ratio >1 or <1 is used identify disbenefit days. 
+    """
     ds = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{sim}.MDA8_O3.april-august.nc4")
     ds_SNOx = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{sim_SNOx}.MDA8_O3.april-august.nc4")
 
@@ -670,7 +664,9 @@ def get_original_values_ratio(variable, sim, sim_SNOx, resolution='c48'):
 
 
 def get_original_values(variable, sim, conversion_factor=1, resolution='c48'):
-    
+    """"
+    Function to quickly extrapolate results from baseline simulations.
+    """
     ds = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{sim}.Emissions.april-august.nc4")
     da = ds[variable]*conversion_factor
     
@@ -682,7 +678,9 @@ def get_original_values(variable, sim, conversion_factor=1, resolution='c48'):
 
 
 def get_sensitivity_values(variable, simulation, year, conversion_factor=1, resolution='c48'):
-    
+    """"
+    Function to quickly extrapolate results from sensitivity simulations.
+    """
     ds = xr.open_dataset(fr"{MODEL_OUTPUT_DIR}/GCHP.{simulation}.{variable}.april-august.{year}.nc4")
     da = ds[variable]*conversion_factor
     
@@ -697,6 +695,10 @@ def get_sensitivity_values(variable, simulation, year, conversion_factor=1, reso
 
 
 def quantile_error(data):
+    """"
+    Compute error bars corresponding to the 95\% confidence interval.
+    (Useful for asymmetric uncertainty intervals)
+    """
     central = np.mean(data)  # Central value (mean)
     lower = np.quantile(data, 0.025)
     upper = np.quantile(data, 0.975)
@@ -705,7 +707,7 @@ def quantile_error(data):
 
 def calculate_regional_mean_std(da, months, region, resolution='c48'):
     """
-    Calculate the mean and standard deviation for a specific region and month.
+    Calculate the mean and standard deviation of da for a specific region and months.
     """
     if resolution == 'c48':
         cropped_da = crop_regionmask_ar6_c48(da, region_num=ar6_region[region])
@@ -726,24 +728,9 @@ def calculate_regional_mean_std(da, months, region, resolution='c48'):
     return mean, std
 
 
-ar6_region = {
-        "ENA": 5,
-        "EAS": 58,
-        "WCE": 17,
-    }
-
-
-
 def reshape_data(data):
     """
-    Reshapes a list of pairs into a 2D array with separate lists for each index.
-
-    Parameters:
-    data (list of list): A list of pairs, where each pair is [x, y].
-
-    Returns:
-    list of list: A 2D array where the first row contains all first elements of the pairs
-                  and the second row contains all second elements.
+    Reshape a list of pairs into a 2D array with separate lists for each index.
     """
     # Transpose the data using zip
     reshaped = [list(i) for i in zip(*data)]
