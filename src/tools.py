@@ -182,6 +182,8 @@ def get_ensemble_ds(sim, variable_type):
 
 
 def _read_and_process_castnet_data(file_path, qa_options, month):
+    """CASTNET-specific data processing.
+    """
     df = pd.read_csv(file_path)
     valid_df = df[df['QA_CODE'].isin(qa_options)]
     valid_df['DATE_TIME'] = pd.to_datetime(valid_df['DATE_TIME'], infer_datetime_format=True)
@@ -189,6 +191,8 @@ def _read_and_process_castnet_data(file_path, qa_options, month):
 
 
 def _read_and_process_cnemc_data(directory_path, pattern):
+    """CNEMC-specific data processing.
+    """
     matching_files = glob.glob(f'{directory_path}/{pattern}')
     combined_df = pd.concat([pd.read_csv(file) for file in matching_files], ignore_index=True)
     o3_df = combined_df[combined_df['type'] == 'O3']
@@ -200,6 +204,8 @@ def _read_and_process_cnemc_data(directory_path, pattern):
 
 
 def _read_and_process_eea_data(file_path, qa_options, month):
+    """EEA/AirBase-specific data processing.
+    """
     df = pd.read_csv(file_path, on_bad_lines='skip')
     df = df[(df['AveragingTime'] == 'hour') & (df['UnitOfMeasurement'] == 'µg/m3')]
     df['OZONE'] = df['Concentration'] * 0.501 # Convert ug/m3 to ppbv according to EU Directive (293K and 1013 hPa)
@@ -214,6 +220,8 @@ def _read_and_process_eea_data(file_path, qa_options, month):
 
 
 def _get_ozone_observations(region, month):
+    """For a given region, apply network-specific ozone data processing.
+    """
     if region == "ENA":
         file_path =  f'{CASTNET_DIR}/ozone_2014.csv'
         df_month_valid = _read_and_process_castnet_data(file_path, [3], month)
@@ -239,6 +247,9 @@ def _get_ozone_observations(region, month):
 
 
 def _get_all_site_locations(region):
+    """Rename unique identifiers to "SITE_ID" for all networks, then get 
+    location (lat/lon) for each rural SITE_ID.
+    """
 
     # Define file paths and column names to rename for each region
     region_files = {
@@ -288,7 +299,8 @@ def _get_all_site_locations(region):
 
 def _filter_sites_by_observation_availability(region, month, criteria=90):
     """Filter ozone observations by set percentage of minimum available 
-    observations (i.e. criteria 90 = 90%)
+    observations per month (i.e. criteria 90 ==> 90\% of hours per given month
+    must have valid observations)
     """
     df = _get_ozone_observations(region, month)
     
@@ -479,7 +491,7 @@ def _get_complete_valid_site_info(region, month, criteria=90):
 
 
 def get_observed_daily_mda8o3_ar6(region, month, criteria=90):
-    """_get_mda8o3_daily_data for all times.
+    """Calculate MDA8 O3 across all hours and merge site information.
     """
     ar6_region = {
         "ENA": 5,
@@ -498,7 +510,7 @@ def get_observed_daily_mda8o3_ar6(region, month, criteria=90):
 
 
 def get_observed_daily_mda8o3_ar6_afternoon(region, month, criteria=90, min_hour='12:00', max_hour='17:00'):
-    """_get_mda8o3_daily_data_afternoon for Local Time between 12:00 and 17:00.
+    """Calculate MDA8 O3 across afternoon (12-17 LT) hours and merge site information.
     """
 
     ar6_region = {
@@ -544,7 +556,7 @@ def get_observation_mask(sitemean_mda8o3_ar6):
 
 
 def get_masked_model_mda8o3(ds_ref, observation_mask, month):
-    """Select GCHP model values where there are observations        
+    """Select GCHP MDA8 O3 values where there are observations        
     """
     da_ref = ds_ref['SpeciesConc_O3'].sel(time=ds_ref.time.dt.month.isin(month))
     if "lev" in da_ref.dims:
@@ -554,7 +566,7 @@ def get_masked_model_mda8o3(ds_ref, observation_mask, month):
 
 
 def get_model_mda8o3(ds_ref, month):
-    """Select GCHP model values.        
+    """Select GCHP MDA8 O3 values.        
     """
     da_ref = ds_ref['SpeciesConc_O3'].sel(time=ds_ref.time.dt.month.isin(month))
     if "lev" in da_ref.dims:
