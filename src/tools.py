@@ -406,7 +406,7 @@ def _get_complete_valid_site_info(region, month, criteria=90):
     df_valid = _filter_sites_by_observation_availability(region, month, criteria)
     site_locations_df = _get_all_site_locations(region)
     
-    # Merge updated site locations with df_dec_selected
+    # 1. Merge df_valid with site_locations_df and apply network-specific processing steps.
     if region=="WCE":
         
         merged_df = pd.merge(df_valid, site_locations_df,
@@ -439,13 +439,12 @@ def _get_complete_valid_site_info(region, month, criteria=90):
         # Drop sites with nan Longitude or Latitude (cannot find)
         merged_df = merged_df.dropna(subset=['Longitude', 'Latitude'])
 
-    
+    ### Helper functions for add region information to merged_df ###
     def point_in_polygon_shapely(lon, lat, polygon_coords):
         """Check if given lat/lon coordinates lie within the polygon defined by polygon_coords."""
         polygon = Polygon(polygon_coords)
         point = Point(lon, lat)
         return polygon.contains(point)
-
 
     def calculate_region(lat, lon):
         """Given lat/lon coordinates, return the IPCC AR6 region those coordinates lie in"""
@@ -469,13 +468,14 @@ def _get_complete_valid_site_info(region, month, criteria=90):
         elif index_type == "Xdim":
             return Xdim.item()
 
-    # Apply calculations for region and grid indices
+    # 2. Add c48 index (nf, Ydim, Xdim) to each location in merged_df
     for index_type in ["nf", "Ydim", "Xdim"]:
         merged_df[f'{index_type}_idx'] = merged_df.apply(lambda x: get_c48_index(x['Latitude'], x['Longitude'], index_type=index_type), axis=1)
 
+    # 3. Add IPCC AR6 region number to each location in merged_df
     merged_df['Region'] = merged_df.apply(lambda x: calculate_region(x['Latitude'], x['Longitude']), axis=1)
 
-    # Create final DataFrame with all site information
+    # 4. Create final site_info dataframe with all site information
     site_info_data = {
         'SITE_ID': merged_df['SITE_ID'].tolist(),
         'Latitude': merged_df['Latitude'].tolist(),
