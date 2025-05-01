@@ -515,7 +515,7 @@ def get_observed_daily_mda8o3_ar6_afternoon(region, month, criteria=90, min_hour
 
     ar6_region = {
         "ENA": 5,
-        "EAS": 35,
+        "EAS": 58,
         "WCE": 17,
     }
 
@@ -721,6 +721,12 @@ def calculate_regional_mean_std(da, months, region, resolution='c48'):
     """
     Calculate the mean and standard deviation of da for a specific region and months.
     """
+    ar6_region = {
+        "ENA": 5,
+        "EAS": 58,
+        "WCE": 17,
+    }
+
     if resolution == 'c48':
         cropped_da = crop_regionmask_ar6_c48(da, region_num=ar6_region[region])
     elif resolution == 'c90':
